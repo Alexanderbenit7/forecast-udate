@@ -3,71 +3,117 @@
 ##### MSc Data Science 2024/25
 ##### Data preprocessing
 
-# -------------------------Libraries----------------------------
-# --------------------------------------------------------------
+# -----------------------------------------Libraries------------------------------------
+# --------------------------------------------------------------------------------------
 
 library(rio)
 library(dplyr)
 library(stringr)
+library(lubridate)
+library(mice)
+library(ggplot2)
 
-# -------------------------Import data--------------------------
-# --------------------------------------------------------------
+# -----------------------------------------Import data----------------------------------
+# --------------------------------------------------------------------------------------
 
 stores = import("/Users/alexander/Documents/MSc Data Science/Understanding Data and their Environment/Assignment 2/store.csv")
 trainData = import("/Users/alexander/Documents/MSc Data Science/Understanding Data and their Environment/Assignment 2/train.csv")
 testData = import("/Users/alexander/Documents/MSc Data Science/Understanding Data and their Environment/Assignment 2/test.csv")
 
-# -----------------------Irregularities-------------------------
-# --------------------------------------------------------------
+# ---------------------------------------Irregularities-----------------------------------------
+# ----------------------------------------------------------------------------------------------
 
-stores = stores %>% # For PromoInterval
+#### PromoInterval
+stores = stores %>% # White spaces in PromoInterval that are not recognized as NAs.
   mutate(across(everything(), ~ ifelse(str_trim(.) == "", NA, .)))
 
+sum(is.na(stores$PromoInterval)) # 544 missing values
 
 
-# -------------------Missing data and imputation----------------
-# --------------------------------------------------------------
+#### New vector to calculate the length of time of nearest competitor existence
+reference_date = as.Date("2015-07-31") # Set reference date (last day of collected information)
 
-# Cols with problems: CompetitionDistance, CompetitionOpenSinceMonth
-# CompetitionOpenSinceYear, Promo2SinceWeek, Promo2SinceYear
+stores$CompetitionOpenDate = as.Date(paste(stores$CompetitionOpenSinceYear,
+                                           stores$CompetitionOpenSinceMonth, "1", sep = "-"))
 
-sum(is.na(stores$CompetitionDistance)) # 3
-sum(is.na(stores$CompetitionOpenSinceMonth)) # 354
-sum(is.na(stores$CompetitionOpenSinceYear)) # 354
-sum(is.na(stores$Promo2SinceWeek)) # 508031
-sum(is.na(stores$Promo2SinceYear)) # 508031
-
-# Add a very large number that suggests absence of competition:
-stores$HasCompetition = ifelse(is.na(stores$CompetitionDistance), 0, 1) # Dummy for competition
-stores$CompetitionDistance[is.na(stores$CompetitionDistance)] = 80000
+stores$DiffTimeMonths = interval(stores$CompetitionOpenDate,
+                                 reference_date) %/% months(1) # Calculate diff-time:
 
 
+#### New vector to calculate the length of promo existence
+stores$PromoDate = as.Date(paste(stores$Promo2SinceYear, stores$Promo2SinceWeek,
+                                 1, sep = "-"), format = "%Y-%U-%u")
+
+stores$DiffPromoTimeMonths = interval(stores$PromoDate, reference_date) %/% months(1)
 
 
-# -------------------------Data integration---------------------
-# --------------------------------------------------------------
+# ------------------------------Missing data and imputation-----------------------------------
+# --------------------------------------------------------------------------------------------
 
-# Check if we have unique stores in stores.csv
-unique_stores = stores %>% 
-  summarise(total_stores = n(),
-            unique_stores = n_distinct(Store))
+sum(is.na(stores$CompetitionDistance)) # 3 -> Hot Deck imputation
+sum(is.na(stores$DiffTimeMonths)) # 354 -> Multiple Imputation
+sum(is.na(stores$DiffPromoTimeMonths)) # 544 -> No imputation 
 
-print(unique_stores) # We do: 1115 unique stores
+#### CompetitionDistance: Hot Deck imputation
+stores = stores %>%
+  group_by(StoreType, Assortment) %>%
+  mutate(
+    CompetitionDistance = ifelse(
+      is.na(CompetitionDistance),
+      median(CompetitionDistance, na.rm = TRUE),  # Replace with group median due to outliers
+      CompetitionDistance
+    )
+  )
+
+#### DiffTimeMonths: Multiple Imputation with MICE
+predictors = stores[, c("DiffTimeMonths", "StoreType", "Assortment",
+                        "CompetitionDistance", "Promo2")] # Select relevant predictors
+
+# Dummy variables
+predictors$StoreType = as.factor(predictors$StoreType)
+predictors$Assortment = as.factor(predictors$Assortment)
+store_type_dummies = model.matrix(~ StoreType - 1, data = predictors)[, -1]
+assortment_dummies = model.matrix(~ Assortment - 1, data = predictors)[, -1]
+predictorsDummies = cbind(predictors, store_type_dummies, assortment_dummies)
+
+predictorsDummies = predictorsDummies[-c(2,3)]
+
+# Perform multiple imputation:
+imputed_data = mice(predictorsDummies, m = 10, maxit = 50, method = "pmm", seed = 123)
+complete_data = complete(imputed_data)
+
+# Back to dataset:
+imputed_diff_time_months = complete_data$DiffTimeMonths
+stores$DiffTimeMonths[is.na(stores$DiffTimeMonths)] = imputed_diff_time_months[is.na(stores$DiffTimeMonths)]
+
+# Checks:
+densityplot(imputed_data)
+
+xyplot(imputed_data, DiffTimeMonths ~ Promo2 + StoreTypeb 
+       + StoreTypec + StoreTyped + Assortmentb + Assortmentc, pch=18,cex=1)
+
+xyplot(imputed_data, DiffTimeMonths ~ CompetitionDistance, pch=18,cex=1)
+
+
+# ---------------------------------Data integration---------------------------------
+# ----------------------------------------------------------------------------------
+
+#### Check if we have unique stores in stores.csv
+length(unique(stores$Store)) == nrow(stores) #TRUE
 
 # Data unification
 data = merge(trainData, stores, by = "Store", all = TRUE)
 print(dim(data))
 
 
-# --------------- Data aggregation and visualization------------
-# --------------------------------------------------------------
+# ----------------------- Data aggregation and visualization------------------------
+# ----------------------------------------------------------------------------------
 
 
-# -----------------------Data transformation--------------------
-# --------------------------------------------------------------
-
-# -----------------------Feature selection--------------------
-# --------------------------------------------------------------
+# -----------------------------------Data transformation----------------------------
+# ----------------------------------------------------------------------------------
 
 
+# -----------------------------------Feature selection------------------------------
+# ----------------------------------------------------------------------------------
 
