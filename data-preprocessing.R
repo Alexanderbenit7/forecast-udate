@@ -52,7 +52,7 @@ stores$DiffPromoTimeMonths = interval(stores$PromoDate, reference_date) %/% mont
 
 sum(is.na(stores$CompetitionDistance)) # 3 -> Hot Deck imputation
 sum(is.na(stores$DiffTimeMonths)) # 354 -> Multiple Imputation
-sum(is.na(stores$DiffPromoTimeMonths)) # 544 -> No imputation 
+sum(is.na(stores$DiffPromoTimeMonths)) # 544 -> Replace with Zero (no promotion)
 
 #### CompetitionDistance: Hot Deck imputation
 stores = stores %>%
@@ -64,6 +64,10 @@ stores = stores %>%
       CompetitionDistance
     )
   )
+
+#### DiffPromoTimeMonths: Replace with zero (no promotions)
+stores$DiffPromoTimeMonths[is.na(stores$DiffPromoTimeMonths)] = 0
+sum(is.na(stores$DiffPromoTimeMonths))
 
 #### DiffTimeMonths: Multiple Imputation with MICE
 predictors = stores[, c("DiffTimeMonths", "StoreType", "Assortment",
