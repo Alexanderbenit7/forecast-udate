@@ -109,15 +109,28 @@ length(unique(stores$Store)) == nrow(stores) #TRUE
 data = merge(trainData, stores, by = "Store", all = TRUE)
 print(dim(data))
 
+# Only necessary variables:
+data = data[,c(1,3:12,15,19:22)]
 
-# ----------------------- Data aggregation and visualization------------------------
-# ----------------------------------------------------------------------------------
+# Assigning format:
+data$Date = as.Date(data$Date, format = "%d/%m/%Y") # Date for forecasting
+
+data$StateHoliday = factor(data$StateHoliday, 
+       levels = c("0", "a", "b", "c"),
+       labels = c("None", "Public Holiday", "Easter Holiday", "Christmas")) # StateHoliday
 
 
-# -----------------------------------Data transformation----------------------------
-# ----------------------------------------------------------------------------------
+# Convert StoreType to factor with meaningful labels
+data$StoreType = factor(data$StoreType,
+                         levels = c("a", "b", "c", "d"),
+                         labels = c("Type A", "Type B", "Type C", "Type D"))
+
+# Convert Assortment to factor with meaningful labels
+data$Assortment = factor(data$Assortment,
+                          levels = c("a", "b", "c"),
+                          labels = c("Basic", "Extra", "Extended"))
 
 
-# -----------------------------------Feature selection------------------------------
+# ----------------------------------------END---------------------------------------
 # ----------------------------------------------------------------------------------
 
