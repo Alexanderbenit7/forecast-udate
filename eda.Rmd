@@ -1,0 +1,299 @@
+---
+title: "Exploratory Data Analysis"
+subtitle: "Understanding Data and their Environment - MSc Data Science"
+author: "11549067"
+output: 
+  pdf_document: 
+    latex_engine: xelatex 
+    extra_dependencies: ["helvet"]
+---
+
+```{r}
+library(rio)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(forcats)
+library(hexbin)
+```
+
+```{r}
+data = import("/Users/alexander/Documents/MSc Data Science/Understanding Data and their Environment/Assignment 2/final-data-forecast.csv")
+```
+
+### 1. General Distribution of Sales
+
+```{r}
+open = data[data$Open == 1,] # Only working with data for open stores
+```
+
+```{r}
+stats = open %>%
+  summarize(
+    mean_sales = mean(Sales, na.rm = TRUE),
+    sd_sales = sd(Sales, na.rm = TRUE),
+    p25 = quantile(Sales, 0.25, na.rm = TRUE),
+    p50 = quantile(Sales, 0.50, na.rm = TRUE),
+    p75 = quantile(Sales, 0.75, na.rm = TRUE)
+  )
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=3.5, fig.width=8, dpi=300}
+# Create density plot
+ggplot(open, aes(x = Sales)) +
+  geom_density(fill = "lightblue", alpha = 0.6) +  # Density plot
+  geom_vline(aes(xintercept = stats$mean_sales), color = "red", 
+             linetype = "dashed", size = .5) +  # Mean  
+  
+  annotate("text", x = 30000, y = 0.00012, 
+           label = paste0("Mean: ", round(stats$mean_sales, 0), 
+                          "\nSD: ", round(stats$sd_sales, 0),
+                          "\nP25: ", round(stats$p25,0),
+                          "\nP50: ", round(stats$p50,0),
+                          "\nP75: ", round(stats$p75,0)), size = 3) +
+  labs(x = " ",
+       y = " ") +
+  theme_minimal()
+
+ggsave("distribution.png")
+```
+
+
+### 2. Trends across time
+
+```{r}
+monthly_sales = open %>%
+  mutate(Month = as.Date(cut(Date, breaks = "month"))) %>%  # Group dates by month
+  group_by(Month) %>%
+  summarise(Average_Sales = mean(Sales, na.rm = TRUE))  # Calculate average sales
+
+monthly_sales$Average_Sales = round(monthly_sales$Average_Sales,0)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=4, fig.width=8, dpi=300}
+# Calculate the overall mean sales
+overall_mean = mean(monthly_sales$Average_Sales, na.rm = TRUE)
+
+# Plot with updated x-axis and mean line
+ggplot(monthly_sales, aes(x = Month, y = Average_Sales)) +
+  geom_line(color = "blue", size = 1) +  # Line plot
+  geom_point(color = "darkred", size = 2) +  # Points for clarity
+  geom_hline(yintercept = overall_mean, color = "red", linetype = "dashed", size = 0.7) +  # Horizontal mean line
+  scale_x_date(date_labels = "%b %Y", date_breaks = "2 months") +  # Format x-axis as months
+  scale_y_continuous(breaks = seq(0, max(monthly_sales$Average_Sales), by = 500)) +
+  labs(title = " ",
+       x = " ",
+       y = " ") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for readability
+
+ggsave("trends_month.png")
+```
+
+
+### 3. Sales by groups
+
+
+```{r echo=FALSE}
+open$Promo = factor(open$Promo, levels = c(0:1), labels = c("No","Yes"))
+
+open = open %>%
+  mutate(across(c(StoreType, DayOfWeek, Assortment, Promo), as.character))
+
+data_long = open %>%
+  pivot_longer(
+    cols = c(StoreType, DayOfWeek, Assortment, Promo), 
+    names_to = "Category", 
+    values_to = "Group"
+  )
+
+# Summarise mean sales for each group within each category
+summary_data = data_long %>%
+  group_by(Category, Group) %>%
+  summarise(Mean_Sales = mean(Sales, na.rm = TRUE), .groups = "drop")
+
+summary_data = summary_data %>%
+  mutate(Group = fct_reorder(Group, Mean_Sales, .desc = TRUE)) 
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=8, dpi=300}
+# Plot mean sales for each group within each category
+ggplot(summary_data, aes(x = Group, y = Mean_Sales, fill = Group)) +
+  geom_col(alpha = 0.8) +
+  
+  geom_text(aes(label = round(Mean_Sales, 0)), 
+            vjust = -0.5, size = 3) +  # Add mean values on top
+  facet_wrap(~ Category, scales = "free_x") +  # Separate graphs by Category
+  scale_y_continuous(breaks = seq(0, max(monthly_sales$Average_Sales), by = 1000))+
+  labs(title = " ",
+       x = "",
+       y = "") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust =.5),  # Rotate x-axis labels
+        legend.position = "none")  # Remove legend since groups are clear
+
+ggsave("trends_groups.png")
+```
+
+
+### 4. Holidays
+
+```{r}
+open$SchoolHoliday = factor(open$SchoolHoliday, levels = c(0:1), labels = c("No","Yes"))
+
+open = open %>%
+  mutate(across(c(StateHoliday, SchoolHoliday), as.character))
+
+data_long = open %>%
+  pivot_longer(
+    cols = c(StateHoliday, SchoolHoliday), 
+    names_to = "Category", 
+    values_to = "Group"
+  )
+
+# Summarise mean sales for each group within each category
+summary_data = data_long %>%
+  group_by(Category, Group) %>%
+  summarise(Mean_Sales = mean(Sales, na.rm = TRUE), .groups = "drop")
+
+summary_data = summary_data %>%
+  mutate(Group = fct_reorder(Group, Mean_Sales, .desc = TRUE)) 
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=4, fig.width=8, dpi=300}
+# Plot mean sales for each group within each category
+ggplot(summary_data, aes(x = Group, y = Mean_Sales, fill = Group)) +
+  geom_col(alpha = 0.8) +
+  
+  geom_text(aes(label = round(Mean_Sales, 0)), 
+            vjust = -0.5, size = 3) +  # Add mean values on top
+  facet_wrap(~ Category, scales = "free_x") +  # Separate graphs by Category
+  scale_y_continuous(breaks = seq(0, max(monthly_sales$Average_Sales), by = 1000))+
+  labs(title = " ",
+       x = "",
+       y = "") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust =.5),  # Rotate x-axis labels
+        legend.position = "none")  # Remove legend since groups are clear
+
+ggsave("holiday_groups.png")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=5, fig.width=6, dpi=300}
+ggplot(open, aes(x = Customers, y = Sales)) +
+  geom_hex(bins = 100) +  
+  scale_fill_gradient(low = "lightblue", high = "darkblue") + 
+  geom_smooth(method = "gam", formula = y ~ s(x), color = "red", size = .5) +
+  
+  labs(title = " ",
+       x = "Customers",
+       y = "Sales",
+       fill = "Count") +
+  
+  theme_minimal() +  
+  
+  theme(
+    legend.position = "bottom", 
+    legend.direction = "horizontal",
+    legend.key.width = unit(2, "cm"), 
+    legend.key.height = unit(0.25, "cm"),
+    legend.title = element_blank(),  # Remove legend title
+    
+    # Adjust axis title and text size
+    axis.title = element_text(size = 10),   
+    axis.text = element_text(size = 8)      
+  )
+
+ggsave("customers_sales.png")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=5, fig.width=6, dpi=300}
+ggplot(open, aes(x = CompetitionDistance, y = Sales)) +
+  geom_hex(bins = 100) +  
+  scale_fill_gradient(low = "lightblue", high = "darkblue") + 
+  geom_smooth(method = "gam", formula = y ~ s(x), color = "red", size = .5) +
+  
+  labs(title = " ",
+       x = "Distance of the Nearest Competitor",
+       y = "Sales",
+       fill = "Count") +
+  
+  theme_minimal() +  
+  
+  theme(
+    legend.position = "bottom", 
+    legend.direction = "horizontal",
+    legend.key.width = unit(2, "cm"), 
+    legend.key.height = unit(0.25, "cm"),
+    legend.title = element_blank(),  # Remove legend title
+    
+    # Adjust axis title and text size
+    axis.title = element_text(size = 10),   
+    axis.text = element_text(size = 8)      
+  )
+
+ggsave("competitor_sales.png")
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=5, fig.width=6, dpi=300}
+ggplot(open, aes(x = DiffTimeMonths, y = Sales)) +
+  geom_hex(bins = 100) +  
+  scale_fill_gradient(low = "lightblue", high = "darkblue") + 
+  geom_smooth(method = "gam", formula = y ~ s(x), color = "red", size = .5) +
+  
+  labs(title = " ",
+       x = "Closest Competitor Time",
+       y = "Sales",
+       fill = "Count") +
+  
+  theme_minimal() +  
+  
+  theme(
+    legend.position = "bottom", 
+    legend.direction = "horizontal",
+    legend.key.width = unit(2, "cm"), 
+    legend.key.height = unit(0.25, "cm"),
+    legend.title = element_blank(),  # Remove legend title
+    
+    # Adjust axis title and text size
+    axis.title = element_text(size = 10),   
+    axis.text = element_text(size = 8)      
+  )
+
+ggsave("competitor_time_sales.png")
+```
+
+```{r}
+promo = open[open$Promo2 == 1,]
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=5, fig.width=6, dpi=300}
+ggplot(open, aes(x = DiffPromoTimeMonths, y = Sales)) +
+  geom_hex(bins = 100) +  
+  scale_fill_gradient(low = "lightblue", high = "darkblue") + 
+  geom_smooth(method = "gam", formula = y ~ s(x), color = "red", size = .5) +
+  
+  labs(title = " ",
+       x = "Time Participating in a Promotion",
+       y = "Sales",
+       fill = "Count") +
+  
+  theme_minimal() +  
+  
+  theme(
+    legend.position = "bottom", 
+    legend.direction = "horizontal",
+    legend.key.width = unit(2, "cm"), 
+    legend.key.height = unit(0.25, "cm"),
+    legend.title = element_blank(),  # Remove legend title
+    
+    # Adjust axis title and text size
+    axis.title = element_text(size = 10),   
+    axis.text = element_text(size = 8)      
+  )
+
+ggsave("promotion_time_sales.png")
+```
+
+

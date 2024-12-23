@@ -110,7 +110,7 @@ data = merge(trainData, stores, by = "Store", all = TRUE)
 print(dim(data))
 
 # Only necessary variables:
-data = data[,c(1,3:12,15,19:22)]
+data = data[,c(1:12,15,19:22)]
 
 # Assigning format:
 data$Date = as.Date(data$Date, format = "%d/%m/%Y") # Date for forecasting
@@ -130,7 +130,11 @@ data$Assortment = factor(data$Assortment,
                           levels = c("a", "b", "c"),
                           labels = c("Basic", "Extra", "Extended"))
 
-
+data$DayOfWeek = factor(data$DayOfWeek,
+                        levels = c(1:7),
+                        labels = c("Monday","Tuesday","Wednesday","Thursday","Friday",
+                                   "Saturday","Sunday"),
+                        ordered = TRUE)
 # ----------------------------------------END---------------------------------------
 # ----------------------------------------------------------------------------------
 
