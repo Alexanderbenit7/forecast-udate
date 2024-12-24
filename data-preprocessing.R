@@ -135,6 +135,50 @@ data$DayOfWeek = factor(data$DayOfWeek,
                         labels = c("Monday","Tuesday","Wednesday","Thursday","Friday",
                                    "Saturday","Sunday"),
                         ordered = TRUE)
+
+# -------------------------------Test Set Preparation-------------------------------
+# ----------------------------------------------------------------------------------
+
+# + DayOfWeek
+# + Promo
+# + StateHoliday
+# + SchoolHoliday
+# + StoreType
+# + Assortment
+# + CompetitionDistance
+# + Promo2
+# + DiffTimeMonths
+# + DiffPromoTimeMonths
+
+compFeatures = stores[,c("Store","StoreType","Assortment","CompetitionDistance","Promo2",
+                         "DiffTimeMonths","DiffPromoTimeMonths")]
+
+testData = merge(testData, compFeatures, by = "Store", all.x = T)
+
+
+# Assigning format:
+testData$Date = as.Date(testData$Date, format = "%d/%m/%Y") # Date for forecasting
+
+testData$StateHoliday = factor(testData$StateHoliday, 
+                           levels = c("0", "a", "b", "c"),
+                           labels = c("None", "Public Holiday", "Easter Holiday", "Christmas")) # StateHoliday
+
+# Convert StoreType to factor with meaningful labels
+testData$StoreType = factor(testData$StoreType,
+                        levels = c("a", "b", "c", "d"),
+                        labels = c("Type A", "Type B", "Type C", "Type D"))
+
+# Convert Assortment to factor with meaningful labels
+testData$Assortment = factor(testData$Assortment,
+                         levels = c("a", "b", "c"),
+                         labels = c("Basic", "Extra", "Extended"))
+
+testData$DayOfWeek = factor(testData$DayOfWeek,
+                        levels = c(1:7),
+                        labels = c("Monday","Tuesday","Wednesday","Thursday","Friday",
+                                   "Saturday","Sunday"),
+                        ordered = TRUE)
+
 # ----------------------------------------END---------------------------------------
 # ----------------------------------------------------------------------------------
 

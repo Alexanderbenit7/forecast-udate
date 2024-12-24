@@ -15,7 +15,7 @@ library(dplyr)
 library(tidyr)
 library(forcats)
 library(hexbin)
-library(patchwork)
+library(ggrepel)
 ```
 
 ```{r}
@@ -305,7 +305,7 @@ ggsave("promotion_time_sales.png")
 # For all features:
 tmodel = c("OLS","Ridge","Lasso","MLP")
 rmspe = c(0.2794, 0.2778, 0.2794, 0.1838)
-r2 = c(0.6912, 0.6863, 0.6912, NA)
+r2 = c(0.6912, 0.6863, 0.6912, 0.8674)
 
 AF = as.data.frame(cbind(tmodel,rmspe, r2))
 AF$nfeatures = "All Features"
@@ -313,8 +313,8 @@ AF$nfeatures = "All Features"
 
 ```{r}
 tmodel = c("OLS","Ridge","Lasso","MLP")
-rmspe = c(0.2806, 0.2789, 0.2806, NA)
-r2 = c(0.6886, 0.6839, 0.6886, NA)
+rmspe = c(0.2806, 0.2789, 0.2806, 0.1856)
+r2 = c(0.6886, 0.6839, 0.6886, 0.8664)
 
 SF = as.data.frame(cbind(tmodel,rmspe, r2))
 SF$nfeatures = "Selected Features"
@@ -326,31 +326,40 @@ mlModels$rmspe = as.numeric(as.character(mlModels$rmspe))
 mlModels$r2 = as.numeric(as.character(mlModels$r2))
 ```
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=4, fig.width=3, dpi=300}
 # Create the RMSPE plot
 rmspe_plot = ggplot(mlModels, aes(x = tmodel, y = rmspe, group = nfeatures, color = nfeatures)) +
   geom_line(linewidth = 1) +
-  geom_point(size = 3) +
+  geom_point(size = 2) +
+  geom_text_repel(aes(label = round(rmspe, 4)), size = 6, show.legend = FALSE) +  # Use ggrepel for labels
   labs(title = " ", x = " ", y = "RMSPE") +
   theme_minimal() +
   theme(
     legend.position = "bottom",
-    legend.title = element_blank())
+    legend.title = element_blank(),
+    axis.title = element_text(size = 10),   
+    axis.text = element_text(size = 8)
+  )
 
+# Save the plot
+ggsave("rmspe.png")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=4, fig.width=3, dpi=300}
 # Create the R² plot
-r2_plot = ggplot(mlModels %>% filter(!is.na(r2)), aes(x = tmodel, y = r2, group = nfeatures, color = nfeatures)) +
+r2_plot = ggplot(mlModels, aes(x = tmodel, y = r2, group = nfeatures, color = nfeatures)) +
   geom_line(linewidth = 1) +
-  geom_point(size = 3) +
+  geom_point(size = 2) +
+  geom_text_repel(aes(label = round(r2, 4)), size = 6, show.legend = FALSE) +
   labs(title = " ", x = " ", y = "R²") +
   theme_minimal() +
   theme(
     legend.position = "bottom",
-    legend.title = element_blank())
+    legend.title = element_blank(),
+    axis.title = element_text(size = 10),   
+    axis.text = element_text(size = 8))
 
-# Arrange the plots side by side
-combined_plot = rmspe_plot + r2_plot + plot_layout(ncol = 2)
+ggsave("r2.png")
 
-# Display the plot
-print(combined_plot)
 ```
 
