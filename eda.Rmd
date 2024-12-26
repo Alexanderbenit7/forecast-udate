@@ -19,7 +19,8 @@ library(ggrepel)
 ```
 
 ```{r}
-data = import("/Users/alexander/Documents/MSc Data Science/Understanding Data and their Environment/Assignment 2/final-data-forecast.csv")
+data = import("/Users/alexander/Documents/MSc Data Science/Understanding Data and their Environment/Assignment 2/final-data/final-trainData.csv")
+forecasted = import("/Users/alexander/Documents/MSc Data Science/Understanding Data and their Environment/Assignment 2/final-data/forecasted-data.csv")
 ```
 
 ### 1. General Distribution of Sales
@@ -303,9 +304,9 @@ ggsave("promotion_time_sales.png")
 
 ```{r}
 # For all features:
-tmodel = c("OLS","Ridge","Lasso","MLP")
-rmspe = c(0.2794, 0.2778, 0.2794, 0.1838)
-r2 = c(0.6912, 0.6863, 0.6912, 0.8674)
+tmodel = c("OLS","Ridge","Lasso", "MLP")
+rmspe = c(0.2794, 0.2778, 0.2794, 0.2211)
+r2 = c(0.6912, 0.6863, 0.6912, 0.8391)
 
 AF = as.data.frame(cbind(tmodel,rmspe, r2))
 AF$nfeatures = "All Features"
@@ -313,8 +314,8 @@ AF$nfeatures = "All Features"
 
 ```{r}
 tmodel = c("OLS","Ridge","Lasso","MLP")
-rmspe = c(0.2806, 0.2789, 0.2806, 0.1856)
-r2 = c(0.6886, 0.6839, 0.6886, 0.8664)
+rmspe = c(0.2806, 0.2789, 0.2806, 0.2225)
+r2 = c(0.6886, 0.6839, 0.6886, 0.8350)
 
 SF = as.data.frame(cbind(tmodel,rmspe, r2))
 SF$nfeatures = "Selected Features"
@@ -363,3 +364,105 @@ ggsave("r2.png")
 
 ```
 
+
+### 6. Forecasting Sales
+
+```{r}
+# Months:
+monthly_sales_f = forecasted %>%
+  mutate(Month = as.Date(cut(Date, breaks = "month"))) %>%  # Group dates by month
+  group_by(Month) %>%
+  summarise(Average_Sales = mean(Sales, na.rm = TRUE))  # Calculate average sales
+
+monthly_sales_f$Average_Sales = round(monthly_sales_f$Average_Sales,0)
+
+monthly_sales$type = "Historical Data"
+monthly_sales_f$type = "Forecasted Data"
+```
+
+```{r}
+# Weeks:
+weekly_sales = open %>%
+  mutate(Week = as.Date(cut(Date, breaks = "week"))) %>%  # Group dates by week
+  group_by(Week) %>%
+  summarise(Average_Sales = mean(Sales, na.rm = TRUE))  # Calculate average sales
+
+weekly_sales$Average_Sales = round(weekly_sales$Average_Sales, 0)  # Round average sales
+
+weekly_sales$type = "Historical Data"
+
+# Weeks for forecasted data:
+weekly_sales_f = forecasted %>%
+  mutate(Week = as.Date(cut(Date, breaks = "week"))) %>%  # Group dates by week
+  group_by(Week) %>%
+  summarise(Average_Sales = mean(Sales, na.rm = TRUE))  # Calculate average sales
+
+weekly_sales_f$Average_Sales = round(weekly_sales_f$Average_Sales, 0)  # Round average sales
+
+weekly_sales_f$type = "Forecasted Data"
+```
+
+```{r}
+for_month_data = rbind(monthly_sales, monthly_sales_f)
+for_weeks_data = rbind(weekly_sales, weekly_sales_f)
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=4, fig.width=8, dpi=300}
+# Calculate the overall mean sales
+overall_mean = mean(for_month_data$Average_Sales, na.rm = TRUE)
+
+# Plot with updated x-axis and mean line
+ggplot(for_month_data, aes(x = Month, y = Average_Sales, color = type, group = 1)) +
+  geom_line(size = 1) +  # Line plot with color based on type
+  geom_point(size = 2) +  # Points for clarity
+  geom_hline(yintercept = overall_mean, color = "red", linetype = "dashed", size = 0.7) +  # Horizontal mean line
+  scale_x_date(date_labels = "%b %Y", date_breaks = "2 months") +  # Format x-axis as months
+  scale_y_continuous(breaks = seq(0, max(for_month_data$Average_Sales), by = 500)) +
+  scale_color_manual(values = c("Historical Data" = "blue", "Forecasted Data" = "green")) +  # Custom colors
+  labs(title = " ",
+       x = " ",
+       y = " ") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
+        legend.title = element_blank()) + # Remove legend title
+
+  theme(
+    legend.position = "bottom", 
+    legend.direction = "horizontal",
+    legend.key.width = unit(1, "cm"), 
+    legend.key.height = unit(0.25, "cm"),
+    legend.title = element_blank())
+
+ggsave("month-forecast.png")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=4, fig.width=8, dpi=300}
+for_weeks_data = for_weeks_data[as.Date(for_weeks_data$Week) > as.Date("2014-12-29"), ]
+
+# Calculate the overall mean sales
+overall_mean <- mean(for_weeks_data$Average_Sales, na.rm = TRUE)
+
+# Plot with updated x-axis and mean line
+ggplot(for_weeks_data, aes(x = Week, y = Average_Sales, color = type, group = 1)) +
+  geom_line(size = 1) +  # Line plot with color based on type
+  geom_point(size = 2) +  # Points for clarity
+  geom_hline(yintercept = overall_mean, color = "red", linetype = "dashed", size = 0.7) +  # Horizontal mean line
+  scale_x_date(date_labels = "%b %Y", date_breaks = "2 weeks") +  # Format x-axis as weeks grouped by month
+  scale_y_continuous(breaks = seq(0, max(for_weeks_data$Average_Sales, na.rm = TRUE), by = 500)) +
+  scale_color_manual(values = c("Historical Data" = "blue", "Forecasted Data" = "green")) +  # Custom colors
+  labs(title = " ",
+       x = " ",
+       y = " ") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
+    legend.position = "bottom", 
+    legend.direction = "horizontal",
+    legend.key.width = unit(1, "cm"), 
+    legend.key.height = unit(0.25, "cm"),
+    legend.title = element_blank()  # Remove legend title
+  )
+
+ggsave("week-forecast.png")
+```

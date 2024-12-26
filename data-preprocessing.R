@@ -115,26 +115,37 @@ data = data[,c(1:12,15,19:22)]
 # Assigning format:
 data$Date = as.Date(data$Date, format = "%d/%m/%Y") # Date for forecasting
 
-data$StateHoliday = factor(data$StateHoliday, 
-       levels = c("0", "a", "b", "c"),
-       labels = c("None", "Public Holiday", "Easter Holiday", "Christmas")) # StateHoliday
+data = data %>%
+  mutate(StateHoliday = case_when(
+    StateHoliday == "0" ~ 1L,
+    StateHoliday == "a" ~ 2L,
+    StateHoliday == "b" ~ 3L,
+    StateHoliday == "c" ~ 4L,
+    TRUE ~ NA_integer_  # To handle unexpected values
+  ))
 
+data = data %>%
+  mutate(StoreType = case_when(
+    StoreType == "a" ~ 1L,
+    StoreType == "b" ~ 2L,
+    StoreType == "c" ~ 3L,
+    StoreType == "d" ~ 4L,
+    TRUE ~ NA_integer_  # To handle unexpected values
+  ))
 
-# Convert StoreType to factor with meaningful labels
-data$StoreType = factor(data$StoreType,
-                         levels = c("a", "b", "c", "d"),
-                         labels = c("Type A", "Type B", "Type C", "Type D"))
+data = data %>%
+  mutate(Assortment = case_when(
+    Assortment == "a" ~ 1L,
+    Assortment == "b" ~ 2L,
+    Assortment == "c" ~ 3L,
+    TRUE ~ NA_integer_  # To handle unexpected values
+  ))
 
-# Convert Assortment to factor with meaningful labels
-data$Assortment = factor(data$Assortment,
-                          levels = c("a", "b", "c"),
-                          labels = c("Basic", "Extra", "Extended"))
+### Drop irrelevant features for forecasting:
 
-data$DayOfWeek = factor(data$DayOfWeek,
-                        levels = c(1:7),
-                        labels = c("Monday","Tuesday","Wednesday","Thursday","Friday",
-                                   "Saturday","Sunday"),
-                        ordered = TRUE)
+data = data[,-c(14,16)]
+
+data$Set = "Training"
 
 # -------------------------------Test Set Preparation-------------------------------
 # ----------------------------------------------------------------------------------
@@ -155,29 +166,38 @@ compFeatures = stores[,c("Store","StoreType","Assortment","CompetitionDistance",
 
 testData = merge(testData, compFeatures, by = "Store", all.x = T)
 
-
 # Assigning format:
 testData$Date = as.Date(testData$Date, format = "%d/%m/%Y") # Date for forecasting
 
-testData$StateHoliday = factor(testData$StateHoliday, 
-                           levels = c("0", "a", "b", "c"),
-                           labels = c("None", "Public Holiday", "Easter Holiday", "Christmas")) # StateHoliday
+testData = testData %>%
+  mutate(StateHoliday = case_when(
+    StateHoliday == "0" ~ 1L,
+    StateHoliday == "a" ~ 2L,
+    StateHoliday == "b" ~ 3L,
+    StateHoliday == "c" ~ 4L,
+    TRUE ~ NA_integer_  # To handle unexpected values
+  ))
 
-# Convert StoreType to factor with meaningful labels
-testData$StoreType = factor(testData$StoreType,
-                        levels = c("a", "b", "c", "d"),
-                        labels = c("Type A", "Type B", "Type C", "Type D"))
+testData = testData %>%
+  mutate(StoreType = case_when(
+    StoreType == "a" ~ 1L,
+    StoreType == "b" ~ 2L,
+    StoreType == "c" ~ 3L,
+    StoreType == "d" ~ 4L,
+    TRUE ~ NA_integer_  # To handle unexpected values
+  ))
 
-# Convert Assortment to factor with meaningful labels
-testData$Assortment = factor(testData$Assortment,
-                         levels = c("a", "b", "c"),
-                         labels = c("Basic", "Extra", "Extended"))
+testData = testData %>%
+  mutate(Assortment = case_when(
+    Assortment == "a" ~ 1L,
+    Assortment == "b" ~ 2L,
+    Assortment == "c" ~ 3L,
+    TRUE ~ NA_integer_  # To handle unexpected values
+  ))
 
-testData$DayOfWeek = factor(testData$DayOfWeek,
-                        levels = c(1:7),
-                        labels = c("Monday","Tuesday","Wednesday","Thursday","Friday",
-                                   "Saturday","Sunday"),
-                        ordered = TRUE)
+testData$Set = "Testing"
+
+finalDATA = rbind(data, testData)
 
 # ----------------------------------------END---------------------------------------
 # ----------------------------------------------------------------------------------
