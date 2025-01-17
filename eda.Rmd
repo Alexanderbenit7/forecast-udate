@@ -407,7 +407,6 @@ for_month_data = rbind(monthly_sales, monthly_sales_f)
 for_weeks_data = rbind(weekly_sales, weekly_sales_f)
 ```
 
-
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=4, fig.width=8, dpi=300}
 # Calculate the overall mean sales
 overall_mean = mean(for_month_data$Average_Sales, na.rm = TRUE)
@@ -466,3 +465,25 @@ ggplot(for_weeks_data, aes(x = Week, y = Average_Sales, color = type, group = 1)
 
 ggsave("week-forecast.png")
 ```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.height=4, fig.width=8, dpi=300}
+week_mean <- mean(weekly_sales_f$Average_Sales)
+
+ggplot(weekly_sales_f, aes(x = Week, y = Average_Sales)) +
+  geom_col(alpha = 0.8) +
+  
+  geom_text(aes(label = round(Average_Sales, 0)), 
+            vjust = -0.5, size = 3) + 
+  
+  geom_hline(yintercept = week_mean, color = "red", linetype = "dashed", size = 0.7) +
+  
+  scale_x_date(date_breaks = "1 week") + 
+  
+  labs(title = " ",
+       x = " ",
+       y = " ") +
+  theme_minimal()
+
+ggsave("week-forecast2.png")
+```
+
