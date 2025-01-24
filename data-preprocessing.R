@@ -12,6 +12,7 @@ library(stringr)
 library(lubridate)
 library(mice)
 library(ggplot2)
+library(fastDummies)
 
 # -----------------------------------------Import data----------------------------------
 # --------------------------------------------------------------------------------------
@@ -198,6 +199,28 @@ testData = testData %>%
 testData$Set = "Testing"
 
 finalDATA = rbind(data, testData)
+
+### Dummy variables of categorical predictors
+
+# DayOfWeek
+modelDATA = dummy_cols(finalDATA, select_columns = "DayOfWeek",
+                       remove_first_dummy = TRUE)
+modelDATA = modelDATA[,-c(2)]
+
+#StateHoliday
+modelDATA = dummy_cols(modelDATA, select_columns = "StateHoliday",
+                       remove_first_dummy = TRUE)
+modelDATA = modelDATA[,-c(7)]
+
+# StoreType
+modelDATA = dummy_cols(modelDATA, select_columns = "StoreType",
+                       remove_first_dummy = TRUE)
+modelDATA = modelDATA[,-c(8)]
+
+# Assortment
+modelDATA = dummy_cols(modelDATA, select_columns = "Assortment",
+                       remove_first_dummy = TRUE)
+modelDATA = modelDATA[,-c(8)]
 
 # ----------------------------------------END---------------------------------------
 # ----------------------------------------------------------------------------------

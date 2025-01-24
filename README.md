@@ -12,5 +12,5 @@ The repository is organized as follows:
 - _data-preprocessing.R_: Handling inconsistencies, missing values and application of imputations techniques
 - _salesFeatureSelection.ipynb_: Random Forest for selection of relevant features
 - _eda.Rmd_: Exploratory Data Analysis
-- _forecastingFINAL.ipynb_: Machine Learning models for sales forecasting
+- _forecasting.ipynb_: Machine Learning models for sales forecasting
 

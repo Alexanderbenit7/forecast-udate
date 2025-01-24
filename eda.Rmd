@@ -20,7 +20,7 @@ library(ggrepel)
 
 ```{r}
 data = import("/Users/alexander/Documents/MSc Data Science/Understanding Data and their Environment/Assignment 2/final-data/final-trainData.csv")
-forecasted = import("/Users/alexander/Documents/MSc Data Science/Understanding Data and their Environment/Assignment 2/final-data/forecasted-data.csv")
+forecasted = import("/Users/alexander/Documents/MSc Data Science/Understanding Data and their Environment/Assignment 2/final-data/outputFINALudate.csv")
 ```
 
 ### 1. General Distribution of Sales
@@ -305,8 +305,8 @@ ggsave("promotion_time_sales.png")
 ```{r}
 # For all features:
 tmodel = c("OLS","Ridge","Lasso", "MLP")
-rmspe = c(0.2794, 0.2778, 0.2794, 0.2211)
-r2 = c(0.6912, 0.6863, 0.6912, 0.8391)
+rmspe = c(0.2795, 0.2797, 0.2795, 0.2159)
+r2 = c(0.7681, 0.7681, 0.7681, 0.8430)
 
 AF = as.data.frame(cbind(tmodel,rmspe, r2))
 AF$nfeatures = "All Features"
@@ -314,8 +314,8 @@ AF$nfeatures = "All Features"
 
 ```{r}
 tmodel = c("OLS","Ridge","Lasso","MLP")
-rmspe = c(0.2806, 0.2789, 0.2806, 0.2225)
-r2 = c(0.6886, 0.6839, 0.6886, 0.8350)
+rmspe = c(0.2795, 0.2795, 0.2795, 0.2221)
+r2 = c(0.7684, 0.7683, 0.7684, 0.8374)
 
 SF = as.data.frame(cbind(tmodel,rmspe, r2))
 SF$nfeatures = "Selected Features"
